@@ -59,6 +59,14 @@ resource "aws_launch_template" "example" {
   EOF
   )
 
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = {
+      Name = "terraform-asg-example"
+    }
+  }
+
   # Autoscaling Groupがあるlaunch templateを使った場合に必須
   lifecycle {
     create_before_destroy = true
@@ -78,7 +86,7 @@ resource "aws_autoscaling_group" "example" {
   health_check_type = "ELB"
 
   tag {
-    key                 = "name"
+    key                 = "Name"
     value               = "terraform-asg-example"
     propagate_at_launch = true
   }
