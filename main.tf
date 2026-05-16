@@ -8,8 +8,8 @@ variable "server_port" {
   default = 8080
 }
 
-resource "aws_instance" "example" {
-  ami = "ami-0fb653ca2d3203ac1"
+resource "aws_launch_template" "example" {
+  image_id = "ami-0fb653ca2d3203ac1"
   instance_type = "t2.micro"
   vpc_security_group_ids = [aws_security_group.instance.id]
 
@@ -19,10 +19,36 @@ resource "aws_instance" "example" {
   nohup busybox httpd -f -p ${var.server_port} &
   EOF
 
-  user_data_replace_on_change = true
+# Autoscaling Groupがあるlaunch templateを使った場合に必須
+lifecycle {
+  create_before_destroy = true
+  }
+}
 
-  tags = {
-    Name = "terraform-example"
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnets" "default" {
+  filter {
+    name = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+resource "aws_autoscaling_group" "example" {
+  min_size = 2
+  max_size = 10
+
+  launch_template {
+    id = aws_launch_template.example
+  }
+  vpc_zone_identifier = data.aws_subnets.default.ids
+
+tag {
+  key = "name"
+  value = "terraform-asg-example"
+  propagate_at_launch = true
   }
 }
 
